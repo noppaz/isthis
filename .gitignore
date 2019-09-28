@@ -1,0 +1,8 @@
+#Settings file with app secrets
+settings.conf
+
+#Spotipy access token
+.cache-*
+
+#Local dev env
+.vscode/
