@@ -4,5 +4,4 @@ settings.conf
 #Spotipy access token
 .cache-*
 
-#Local dev env
-.vscode/
+__pycache__
