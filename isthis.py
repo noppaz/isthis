@@ -1,4 +1,4 @@
-import sys
+import argparse
 import configparser
 import spotipy
 import spotipy.util as util
@@ -75,13 +75,20 @@ def create_playlist(sp, sorted_tracks, artist_name, username, number_of_tracks):
 
 
 def main():
-    try:
-        artist = sys.argv[1]
-        number_of_tracks = int(sys.argv[2])
-    except Exception:
-        print("Did not get artist and number of tracks arguments. Requesting input.")
-        artist = input("Artist URI: ")
-        number_of_tracks = int(input("Number of tracks: "))
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--artist-uri",
+        required=True,
+        type=str,
+        help="Artist URI",
+    )
+    parser.add_argument(
+        "--tracks", default=30, type=int, help="Number of tracks for playlist"
+    )
+
+    args = parser.parse_args()
+    artist = args.artist_uri
+    number_of_tracks = args.tracks
 
     sp, username, country = authorize()
     artist_name, artist_tracks = get_artist_tracks(sp, artist, country)
