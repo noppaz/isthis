@@ -1,11 +1,11 @@
 import argparse
 import configparser
 import spotipy
-import spotipy.util as util
 from track import Track
+from typing import Tuple
 
 
-def authorize():
+def authorize() -> Tuple[spotipy.Spotify, str, str]:
     config = configparser.ConfigParser()
     config.read("settings.conf")
 
@@ -16,7 +16,7 @@ def authorize():
     client_secret = config["spotify"]["client_secret"]
     redirect_uri = config["spotify"]["redirect_uri"]
 
-    token = util.prompt_for_user_token(
+    token = spotipy.util.prompt_for_user_token(
         username,
         scope,
         client_id=client_id,
@@ -28,7 +28,9 @@ def authorize():
     return sp, username, country
 
 
-def get_artist_tracks(sp, artist, country):
+def get_artist_tracks(
+    sp: spotipy.Spotify, artist: str, country: str
+) -> Tuple[str, list]:
     artist_albums = sp.artist_albums(artist, country=country, limit=50)
     artist_name = get_artist_name(artist, artist_albums["items"])
     print("Searching for tracks by", artist_name)
@@ -44,14 +46,14 @@ def get_artist_tracks(sp, artist, country):
     return artist_name, artist_tracks
 
 
-def get_artist_name(artist, artist_albums):
+def get_artist_name(artist: str, artist_albums: str) -> str:
     for album in artist_albums:
         for a in album["artists"]:
             if a["uri"] == artist:
                 return a["name"]
 
 
-def select_tracks(sp, country, artist_tracks):
+def select_tracks(sp: spotipy.Spotify, country: str, artist_tracks: list) -> list:
     sorted_tracks = []
     i = 0
     while i < len(artist_tracks):
@@ -67,7 +69,13 @@ def select_tracks(sp, country, artist_tracks):
     return sorted_tracks
 
 
-def create_playlist(sp, sorted_tracks, artist_name, username, number_of_tracks):
+def create_playlist(
+    sp: spotipy.Spotify,
+    sorted_tracks: list,
+    artist_name: str,
+    username: str,
+    number_of_tracks: int,
+) -> None:
     track_uris = [sortedTrack.uri for sortedTrack in sorted_tracks]
     pl = sp.user_playlist_create(username, "Is This " + artist_name, public=True)
     sp.user_playlist_add_tracks(username, pl["uri"], track_uris[:number_of_tracks])
@@ -87,8 +95,8 @@ def main():
     )
 
     args = parser.parse_args()
-    artist = args.artist_uri
-    number_of_tracks = args.tracks
+    artist: str = args.artist_uri
+    number_of_tracks: int = args.tracks
 
     sp, username, country = authorize()
     artist_name, artist_tracks = get_artist_tracks(sp, artist, country)
