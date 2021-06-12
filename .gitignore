@@ -5,3 +5,4 @@ settings.conf
 .cache-*
 
 __pycache__
+.mypy_cache
