@@ -1,8 +1,10 @@
 import argparse
 import configparser
+from typing import List, Tuple
+
 import spotipy
+
 from track import Track
-from typing import Tuple
 
 
 def authorize() -> Tuple[spotipy.Spotify, str, str]:
@@ -46,18 +48,19 @@ def get_artist_tracks(
     return artist_name, artist_tracks
 
 
-def get_artist_name(artist: str, artist_albums: str) -> str:
+def get_artist_name(artist: str, artist_albums: List[dict]) -> str:
     for album in artist_albums:
         for a in album["artists"]:
             if a["uri"] == artist:
                 return a["name"]
+    return "Unknown Artist"
 
 
 def select_tracks(sp: spotipy.Spotify, country: str, artist_tracks: list) -> list:
     sorted_tracks = []
     i = 0
     while i < len(artist_tracks):
-        tracks = sp.tracks(artist_tracks[i : 50 + i], market=country)
+        tracks = sp.tracks(artist_tracks[i : 50 + i], market=country)  # noqa: E203
         for track in tracks["tracks"]:
             t = Track(track["name"], track["uri"], track["popularity"])
             sorted_tracks.append(t)
@@ -77,9 +80,10 @@ def create_playlist(
     number_of_tracks: int,
 ) -> None:
     track_uris = [sortedTrack.uri for sortedTrack in sorted_tracks]
+    tracks_to_add = track_uris[:number_of_tracks]
     pl = sp.user_playlist_create(username, "Is This " + artist_name, public=True)
-    sp.user_playlist_add_tracks(username, pl["uri"], track_uris[:number_of_tracks])
-    print(f"Playlist created and {number_of_tracks} songs added")
+    sp.user_playlist_add_tracks(username, pl["uri"], tracks_to_add)
+    print(f"Playlist created and {len(tracks_to_add)} songs added")
 
 
 def main():
