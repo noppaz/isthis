@@ -1,10 +1,16 @@
 import argparse
 import configparser
+from dataclasses import dataclass
 from typing import List, Tuple
 
 import spotipy
 
-from track import Track
+
+@dataclass
+class Track:
+    name: str
+    uri: str
+    popularity: int
 
 
 def authorize() -> Tuple[spotipy.Spotify, str, str]:
