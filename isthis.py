@@ -36,9 +36,9 @@ def authorize() -> Tuple[spotipy.Spotify, str, str]:
     return sp, username, country
 
 
-def get_artist_tracks(
+def get_artist_tracks_uris(
     sp: spotipy.Spotify, artist: str, country: str
-) -> Tuple[str, list]:
+) -> Tuple[str, List[str]]:
     artist_albums = sp.artist_albums(artist, country=country, limit=50)
     artist_name = get_artist_name(artist, artist_albums["items"])
     print("Searching for tracks by", artist_name)
@@ -62,7 +62,9 @@ def get_artist_name(artist: str, artist_albums: List[dict]) -> str:
     return "Unknown Artist"
 
 
-def select_tracks(sp: spotipy.Spotify, country: str, artist_tracks: list) -> list:
+def get_track_popularity(
+    sp: spotipy.Spotify, country: str, artist_tracks: list
+) -> List[Track]:
     sorted_tracks = []
     i = 0
     while i < len(artist_tracks):
@@ -109,8 +111,8 @@ def main():
     number_of_tracks: int = args.tracks
 
     sp, username, country = authorize()
-    artist_name, artist_tracks = get_artist_tracks(sp, artist, country)
-    sorted_tracks = select_tracks(sp, country, artist_tracks)
+    artist_name, track_uris = get_artist_tracks_uris(sp, artist, country)
+    sorted_tracks = get_track_popularity(sp, country, track_uris)
     create_playlist(sp, sorted_tracks, artist_name, username, number_of_tracks)
 
 
