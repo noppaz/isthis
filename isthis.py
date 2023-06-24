@@ -1,4 +1,4 @@
-import argparse
+import click
 import configparser
 from dataclasses import dataclass
 from typing import List, Tuple
@@ -89,32 +89,36 @@ def create_playlist(
 ) -> None:
     track_uris = [sortedTrack.uri for sortedTrack in sorted_tracks]
     tracks_to_add = track_uris[:number_of_tracks]
-    pl = sp.user_playlist_create(username, "Is This " + artist_name, public=True)
+    description = (
+        "This is playlist equivalent. Generated with https://github.com/noppaz/isthis"
+    )
+    pl = sp.user_playlist_create(
+        username, f"Is This {artist_name}", public=True, description=description
+    )
     sp.user_playlist_add_tracks(username, pl["uri"], tracks_to_add)
     print(f"Playlist created and {len(tracks_to_add)} songs added")
 
 
-def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "--artist-uri",
-        required=True,
-        type=str,
-        help="Artist URI",
-    )
-    parser.add_argument(
-        "--tracks", default=30, type=int, help="Number of tracks for playlist"
-    )
-
-    args = parser.parse_args()
-    artist: str = args.artist_uri
-    number_of_tracks: int = args.tracks
-
+@click.command()
+@click.option(
+    "--artist",
+    prompt="Artist URI",
+    type=click.STRING,
+    help="Artist URI, example: spotify:artist:3WrFJ7ztbogyGnTHbHJFl2",
+)
+@click.option(
+    "--tracks",
+    default=30,
+    prompt="Number of tracks",
+    type=click.INT,
+    help="Number of tracks for playlist",
+)
+def is_this(artist: str, tracks: int):
     sp, username, country = authorize()
     artist_name, track_uris = get_artist_tracks_uris(sp, artist, country)
     sorted_tracks = get_track_popularity(sp, country, track_uris)
-    create_playlist(sp, sorted_tracks, artist_name, username, number_of_tracks)
+    create_playlist(sp, sorted_tracks, artist_name, username, tracks)
 
 
 if __name__ == "__main__":
-    main()
+    is_this()
