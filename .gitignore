@@ -1,8 +1,9 @@
-#Settings file with app secrets
+# Settings file with app secrets
 settings.conf
 
-#Spotipy access token
+# Spotipy access token
 .cache-*
 
 __pycache__
 .mypy_cache
+.ruff_cache
