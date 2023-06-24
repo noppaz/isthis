@@ -7,8 +7,9 @@ verify_ssl = true
 python_version = "3.11"
 
 [packages]
-spotipy = "*"
 click = "*"
+rich = "*"
+spotipy = "*"
 
 [dev-packages]
 black = "*"

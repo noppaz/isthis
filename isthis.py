@@ -1,9 +1,13 @@
-import click
 import configparser
 from dataclasses import dataclass
 from typing import List, Tuple
 
+import click
 import spotipy
+from rich.console import Console
+from rich.table import Table
+
+SEARCH_ARTIST_AMOUNT = 10
 
 
 @dataclass
@@ -18,7 +22,7 @@ def authorize() -> Tuple[spotipy.Spotify, str, str]:
     config.read("settings.conf")
 
     username = config["spotify"]["username"]
-    country = config["spotify"]["country"]
+    market = config["spotify"]["market"]
     scope = config["spotify"]["scope"]
     client_id = config["spotify"]["client_id"]
     client_secret = config["spotify"]["client_secret"]
@@ -33,13 +37,13 @@ def authorize() -> Tuple[spotipy.Spotify, str, str]:
     )
     sp = spotipy.Spotify(auth=token)
 
-    return sp, username, country
+    return sp, username, market
 
 
 def get_artist_tracks_uris(
-    sp: spotipy.Spotify, artist: str, country: str
+    sp: spotipy.Spotify, artist: str, market: str
 ) -> Tuple[str, List[str]]:
-    artist_albums = sp.artist_albums(artist, country=country, limit=50)
+    artist_albums = sp.artist_albums(artist, country=market, limit=50)
     artist_name = get_artist_name(artist, artist_albums["items"])
     print("Searching for tracks by", artist_name)
 
@@ -63,12 +67,12 @@ def get_artist_name(artist: str, artist_albums: List[dict]) -> str:
 
 
 def get_track_popularity(
-    sp: spotipy.Spotify, country: str, artist_tracks: list
+    sp: spotipy.Spotify, market: str, artist_tracks: list
 ) -> List[Track]:
     sorted_tracks = []
     i = 0
     while i < len(artist_tracks):
-        tracks = sp.tracks(artist_tracks[i : 50 + i], market=country)  # noqa: E203
+        tracks = sp.tracks(artist_tracks[i : 50 + i], market=market)  # noqa: E203
         for track in tracks["tracks"]:
             t = Track(track["name"], track["uri"], track["popularity"])
             sorted_tracks.append(t)
@@ -99,7 +103,44 @@ def create_playlist(
     print(f"Playlist created and {len(tracks_to_add)} songs added")
 
 
-@click.command()
+def search_artists(sp: spotipy.Spotify, query: str) -> list:
+    response: dict = sp.search(query, type="artist", limit=SEARCH_ARTIST_AMOUNT)
+    artists = sorted(
+        response["artists"]["items"],
+        key=lambda artist: artist["popularity"],
+        reverse=True,
+    )
+
+    console = Console()
+    table = Table(title="Artists")
+
+    table.add_column("", style="red", no_wrap=True)
+    table.add_column("Name", style="cyan", no_wrap=True)
+    table.add_column("Followers", style="cyan", no_wrap=True)
+    table.add_column("Genres", style="cyan", no_wrap=True)
+    table.add_column("URL", style="bright_black", no_wrap=True)
+    table.add_column("URI", style="bright_black", no_wrap=True)
+
+    for i, artist in enumerate(artists):
+        table.add_row(
+            str(i + 1),
+            artist["name"],
+            str(artist["followers"]["total"]),
+            ", ".join(artist["genres"]),
+            artist["external_urls"]["spotify"],
+            artist["uri"],
+        )
+    console.print(table)
+
+    return artists
+
+
+@click.group()
+def cli():
+    pass
+
+
+@cli.command(help="Create a playlist directly with the Artist URI")
 @click.option(
     "--artist",
     prompt="Artist URI",
@@ -113,12 +154,33 @@ def create_playlist(
     type=click.INT,
     help="Number of tracks for playlist",
 )
-def is_this(artist: str, tracks: int):
-    sp, username, country = authorize()
-    artist_name, track_uris = get_artist_tracks_uris(sp, artist, country)
-    sorted_tracks = get_track_popularity(sp, country, track_uris)
+def create(artist: str, tracks: int) -> None:
+    sp, username, market = authorize()
+    artist_name, track_uris = get_artist_tracks_uris(sp, artist, market)
+    sorted_tracks = get_track_popularity(sp, market, track_uris)
+    create_playlist(sp, sorted_tracks, artist_name, username, tracks)
+
+
+@cli.command(help="Interactive search for the artist")
+def search() -> None:
+    sp, username, market = authorize()
+
+    query: str = click.prompt("Search", type=click.STRING)
+    artists = search_artists(sp, query)
+    artist_selection: int = click.prompt(
+        "Select artist",
+        type=click.IntRange(1, SEARCH_ARTIST_AMOUNT),
+    )
+    artist = artists[artist_selection - 1]["uri"]
+    artist_name, track_uris = get_artist_tracks_uris(sp, artist, market)
+    sorted_tracks = get_track_popularity(sp, market, track_uris)
+    tracks: int = click.prompt(
+        "Number of tracks for playlist",
+        default=30,
+        type=click.INT,
+    )
     create_playlist(sp, sorted_tracks, artist_name, username, tracks)
 
 
 if __name__ == "__main__":
-    is_this()
+    cli()
