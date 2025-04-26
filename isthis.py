@@ -131,7 +131,7 @@ def search_artists(sp: spotipy.Spotify, query: str) -> list:
 
 
 @click.group()
-def cli():
+def cli() -> None:
     pass
 
 
